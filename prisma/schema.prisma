@@ -1,0 +1,130 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  role         String         @default("USER") // USER, ADMIN
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  businesses   Business[]
+  subscription Subscription?
+  settings     UserSettings?
+  history      AuditHistory[]
+}
+
+model Business {
+  id                String   @id @default(uuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  category          String
+  city              String
+  country           String   @default("Pakistan")
+  description       String?
+  targetAudience    String?
+  websiteUrl        String?
+  instagramUrl      String?
+  facebookUrl       String?
+  tiktokUrl         String?
+  linkedinUrl       String?
+  youtubeUrl        String?
+  whatsappNumber    String?
+  googleBusinessUrl String?
+  mainGoal          String
+  createdAt         DateTime @default(now())
+  audits            Audit[]
+}
+
+model Audit {
+  id              String           @id @default(uuid())
+  businessId      String
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  overallScore    Int
+  status          String           // Critical, Needs Improvement, Good, Strong, Excellent
+  createdAt       DateTime         @default(now())
+  scores          AuditScore[]
+  issues          AuditIssue[]
+  recommendations Recommendation[]
+  growthPlan      GrowthPlan?
+}
+
+model AuditScore {
+  id          String @id @default(uuid())
+  auditId     String
+  audit       Audit  @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  category    String // Website, Social Media, WhatsApp, Google Presence, Branding, Content, Conversion
+  score       Int
+  maxScore    Int
+  status      String // Verified, Unable to verify, Needs Improvement, Strong
+  detailsJson String // JSON formatted array/object of criteria findings
+}
+
+model AuditIssue {
+  id          String @id @default(uuid())
+  auditId     String
+  audit       Audit  @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  severity    String // Critical, Important, Optimization
+  category    String
+  impact      String // High, Medium, Low
+  difficulty  String // Easy, Medium, Hard
+}
+
+model Recommendation {
+  id          String  @id @default(uuid())
+  auditId     String
+  audit       Audit   @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  rank        Int
+  title       String
+  action      String
+  category    String
+  impact      String  // High, Medium, Low
+  effort      String  // Low, Medium, High
+  isCompleted Boolean @default(false)
+}
+
+model GrowthPlan {
+  id        String   @id @default(uuid())
+  auditId   String   @unique
+  audit     Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  planJson  String   // Structured 4-week JSON tasks
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      String    @default("FREE") // FREE, PRO, BUSINESS
+  status    String    @default("ACTIVE")
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+}
+
+model AuditHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditId   String
+  score     Int
+  createdAt DateTime @default(now())
+}
+
+model UserSettings {
+  id                 String  @id @default(uuid())
+  userId             String  @unique
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme              String  @default("dark")
+  emailNotifications Boolean @default(true)
+  language           String  @default("en") // en, ur, roman_ur
+}
